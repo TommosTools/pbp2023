@@ -178,13 +178,15 @@ const Participants = () =>
 {
 	const profiles = useApi<{ list: Profile[], info: { loc: Record<string, Geo> } }>(`profiles/${codes}`, 300000, "&max=30&loc=1&ecoords=1");
 
+	const [opened, setOpened] = useState(false);
+
 	const [tick, setTick] = useState(0);
 	useEffect(() =>
 		{
-			const id = setInterval(() => setTick(tick + 1), 60000);
+			const id = setInterval(() => setTick(tick => tick + 1), 60000);
 			return () => clearInterval(id);
 		},
-		[setInterval])
+		[setTick])
 
 	const sortedProfiles = useMemo(
 		() => profiles?.list.sort((a, b) => {
@@ -213,12 +215,20 @@ const Participants = () =>
 		[profiles]);
 
 	return (
-		<StyledParticipants>{
-			sortedProfiles?.map(profile =>
-				<Participant profile={profile} geo={profiles?.info.loc[profile.pid]} key={profile.pid} />)
-		}</StyledParticipants>
+		<StyledParticipants>
+			<Toggle onClick={ () => setOpened(opened => !opened) }>
+				{ opened ? "Hide" : "Show participants" }
+			</Toggle>
+			{ opened && sortedProfiles?.map(profile =>
+				<Participant profile={profile} geo={profiles?.info.loc[profile.pid]} key={profile.pid} />) }
+		</StyledParticipants>
 	);
 }
+
+const Toggle = styled.div`
+	cursor: pointer;
+	text-align: right;
+`;
 
 const StyledParticipants = styled.div`
 	&:not(:empty) {
