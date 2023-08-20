@@ -3,7 +3,7 @@ import { Icon, type Popup as TPopup, type LatLngExpression } from "leaflet";
 import route from "./route.json";
 import participants from "./participants.json";
 import { GeoJsonObject } from "geojson";
-import { LastUpdated, RTRTCacheContextProvider, useApi } from "./RTRT";
+import { LastUpdated, RTRTCacheContextProvider, useApi, useLastUpdated } from "./RTRT";
 import checkpointImage from "./icons/checkpoint.svg";
 import bikeImage from "./icons/bike.svg";
 import { createGlobalStyle, css, styled } from "styled-components";
@@ -124,11 +124,13 @@ const codes = participants.map(p => p.pid).join(",");
 
 const ParticipantMarkers = () => {
 	const profiles = useApi<{ list: Profile[], info: { loc: Record<string, Geo> } }>(`profiles/${codes}`, 60000, "&max=30&loc=1&ecoords=1");
-
+console.log("re-rendering markers");
 	const geos = useMemo(
 		() => profiles?.list.filter(p => profiles.info.loc[p.pid].ecoords).map(p => ({ profile: p, geo: profiles.info.loc[p.pid] })),
 		[profiles]
 	);
+
+	const updated = useLastUpdated();
 
 	const popups = useRef<Record<string, TPopup | null>>({});
 
@@ -155,7 +157,7 @@ const ParticipantMarkers = () => {
 				<Popup ref={ popup => popups.current[profile.pid] = popup }>
 					<b>{profile.name}</b>
 					<br/>
-					Last seen: { formatDuration(+geo.sslp) }
+					Last seen: { formatTime(updated! - 1000 * +geo.sslp) }
 					<br/>
 					at { geo.lpn}
 				</Popup>
@@ -164,21 +166,31 @@ const ParticipantMarkers = () => {
 	</MarkerClusterGroup>);
 }
 
-function formatDuration(seconds: number)
+function formatTime(timestamp: number)
 {
+	const seconds = (Date.now() - timestamp) / 1000;
+
 	if (seconds < 100)
 		return `${ seconds }s ago`;
 	else if (seconds < 20 * 60)
 		return `${ Math.round(seconds / 60) } minutes ago`;
 	else if (seconds < 24 * 60 * 60)
-		return (new Date(Date.now() - seconds * 1000)).toTimeString().replace(/.*?(\d{2}:\d{2}:\d{2}).*(\(.*\))/, '$1 $2');
+		return (new Date(timestamp)).toTimeString().replace(/.*?(\d{2}:\d{2}).*(\(.*\))/, '$1 $2');
 	else
-		return (new Date(Date.now() - seconds * 1000)).toString();
+		return (new Date(timestamp)).toString();
 }
 
 const Participants = () =>
 {
-	const profiles = useApi<{ list: Profile[], info: { loc: Record<string, Geo> } }>(`profiles/${codes}`, 60000, "&max=30&loc=1&ecoords=1");
+	const [tick, setTick] = useState(0);
+	useEffect(() =>
+		{
+			const id = setInterval(() => setTick(tick => tick + 1), 5000);
+			return () => clearInterval(id);
+		},
+		[setTick])
+
+	const profiles = useApi<{ list: Profile[], info: { loc: Record<string, Geo> } }>(`profiles/${codes}`, 60000, "&max=30&loc=1&ecoords=1", tick);
 
 	const [opened, setOpened] = useState(false);
 
@@ -209,7 +221,7 @@ const Participants = () =>
 		[profiles]);
 
 	return (
-		<StyledParticipants>
+		<StyledParticipants key={tick}>
 			<Toggle onClick={ () => setOpened(opened => !opened) }>
 				{ opened ? "Hide" : "Show participants" }
 			</Toggle>

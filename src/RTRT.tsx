@@ -1,4 +1,4 @@
-import { FC, PropsWithChildren, createContext, useCallback, useContext, useEffect, useState } from "react";
+import { FC, MutableRefObject, PropsWithChildren, createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { styled } from "styled-components";
 
 const BaseURL	= "https://api.rtrt.me/";
@@ -8,37 +8,37 @@ const token		= "09f12559c34029bfd6dae00301ed57b1";
 
 type RTRTCache = Record<string, { data?: unknown, expiry?: number } | undefined>
 
-const RTRTCacheContext = createContext<{ updated?: number, cache: RTRTCache, setCache: (update: ((prev: RTRTCache) => RTRTCache) | RTRTCache) => void }>({ cache: {}, setCache: () => { } });
+const RTRTCacheContext = createContext<{
+	updated?: number;
+	cache?: MutableRefObject<RTRTCache>;
+	setCache: (update: ((prev: RTRTCache) => RTRTCache) | RTRTCache) => void;
+}>({ setCache: () => {} });
 
 export const RTRTCacheContextProvider: FC<PropsWithChildren<{}>> = ({ children }) =>
 {
 	const [updated, setUpdated] = useState<number>();
-	const [cache, setCacheRaw] = useState<RTRTCache>({});
+	const cache = useRef<RTRTCache>({});
 	const setCache = useCallback(
 		(update: ((prev: RTRTCache) => RTRTCache) | RTRTCache) => {
-			setCacheRaw(update);
+			if (typeof update === "function")
+				cache.current = update(cache.current);
+			else
+				cache.current = update;
+
 			setUpdated(Date.now());
 		},
-		[setCacheRaw]);
+		[cache]);
 	return <RTRTCacheContext.Provider children={children} value={{ updated, cache, setCache }} />
 }
 
 let loading = false;
 
-export function useApi<T>(path: string, maxAgeMs=300000, extras: string = ""): T | undefined
+export function useApi<T>(path: string, maxAgeMs=300000, extras: string = "", tick?: unknown): T | undefined
 {
 	const { cache, setCache } = useContext(RTRTCacheContext);
 
 	const cacheKey		= path + "/" + extras;
-	const cacheEntry	= cache[cacheKey];
-
-	const [tick, setTick] = useState(0);
-	useEffect(() =>
-		{
-			const id = setInterval(() => setTick(tick => tick + 1), 5000);
-			return () => clearInterval(id);
-		},
-		[setTick])
+	const cacheEntry	= cache?.current[cacheKey];
 
 	useEffect(() =>
 		{
@@ -71,6 +71,8 @@ export const LastUpdated = () =>
 
 	return <StyledLastUpdated>Last updated:{" "}{new Date(updated).toLocaleString()}</StyledLastUpdated>
 }
+
+export const useLastUpdated = () => useContext(RTRTCacheContext).updated;
 
 const StyledLastUpdated = styled.div`
 	position: absolute;
