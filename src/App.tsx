@@ -85,6 +85,7 @@ const Checkpoints = () =>
 					icon={checkpointIcon}
 					position={[+checkpoint.coords!.lat, +checkpoint.coords!.lng]}
 					key={index}
+					zIndexOffset={-1}
 				>
 					<Popup>
 						<b>{checkpoint.name}</b>
@@ -124,7 +125,7 @@ const codes = participants.map(p => p.pid).join(",");
 
 const ParticipantMarkers = () => {
 	const profiles = useApi<{ list: Profile[], info: { loc: Record<string, Geo> } }>(`profiles/${codes}`, 60000, "&max=30&loc=1&ecoords=1");
-console.log("re-rendering markers");
+
 	const geos = useMemo(
 		() => profiles?.list.filter(p => profiles.info.loc[p.pid].ecoords).map(p => ({ profile: p, geo: profiles.info.loc[p.pid] })),
 		[profiles]
