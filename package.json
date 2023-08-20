@@ -23,10 +23,11 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "BUILD_PATH='./docs react-scripts build",
+    "build": "BUILD_PATH='./docs' react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
+  "homepage": "/pbp2023",
   "eslintConfig": {
     "extends": [
       "react-app",
