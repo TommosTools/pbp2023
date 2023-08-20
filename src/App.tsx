@@ -3,7 +3,7 @@ import { Icon, type Popup as TPopup, type LatLngExpression } from "leaflet";
 import route from "./route.json";
 import participants from "./participants.json";
 import { GeoJsonObject } from "geojson";
-import { RTRTCacheContextProvider, useApi } from "./RTRT";
+import { LastUpdated, RTRTCacheContextProvider, useApi } from "./RTRT";
 import checkpointImage from "./icons/checkpoint.svg";
 import bikeImage from "./icons/bike.svg";
 import { createGlobalStyle, css, styled } from "styled-components";
@@ -54,6 +54,8 @@ function App() {
 				</MapContainer>
 
 				<Participants/>
+
+				<LastUpdated/>
 			</RTRTCacheContextProvider>
 		</OpeningContextProvider>
 	</>);
@@ -121,7 +123,7 @@ type Geo = {
 const codes = participants.map(p => p.pid).join(",");
 
 const ParticipantMarkers = () => {
-	const profiles = useApi<{ list: Profile[], info: { loc: Record<string, Geo> } }>(`profiles/${codes}`, 300000, "&max=30&loc=1&ecoords=1");
+	const profiles = useApi<{ list: Profile[], info: { loc: Record<string, Geo> } }>(`profiles/${codes}`, 60000, "&max=30&loc=1&ecoords=1");
 
 	const geos = useMemo(
 		() => profiles?.list.filter(p => profiles.info.loc[p.pid].ecoords).map(p => ({ profile: p, geo: profiles.info.loc[p.pid] })),
@@ -176,17 +178,9 @@ function formatDuration(seconds: number)
 
 const Participants = () =>
 {
-	const profiles = useApi<{ list: Profile[], info: { loc: Record<string, Geo> } }>(`profiles/${codes}`, 300000, "&max=30&loc=1&ecoords=1");
+	const profiles = useApi<{ list: Profile[], info: { loc: Record<string, Geo> } }>(`profiles/${codes}`, 60000, "&max=30&loc=1&ecoords=1");
 
 	const [opened, setOpened] = useState(false);
-
-	const [tick, setTick] = useState(0);
-	useEffect(() =>
-		{
-			const id = setInterval(() => setTick(tick => tick + 1), 60000);
-			return () => clearInterval(id);
-		},
-		[setTick])
 
 	const sortedProfiles = useMemo(
 		() => profiles?.list.sort((a, b) => {
@@ -238,10 +232,10 @@ const StyledParticipants = styled.div`
 		position: absolute;
 		right: 5px;
 		top: 5px;
-		width: 200px;
+		width: 120px;
 		z-index: 1000;
 
-		max-height: calc(100vh - 35px);
+		max-height: calc(50vh);
 		overflow-y: auto;
 	}
 `;

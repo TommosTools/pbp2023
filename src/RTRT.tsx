@@ -1,19 +1,29 @@
-import { FC, PropsWithChildren, createContext, useContext, useEffect, useRef, useState } from "react";
+import { FC, PropsWithChildren, createContext, useCallback, useContext, useEffect, useState } from "react";
+import { styled } from "styled-components";
 
 const BaseURL	= "https://api.rtrt.me/";
 const EventsURL	= `${BaseURL}events/CC-2023/`;
 const appid		= "592479603a4c925a288b4567";
 const token		= "09f12559c34029bfd6dae00301ed57b1";
 
-type RTRTCache = Record<string, { data?: unknown, expiry?: number, loading: boolean } | undefined>
+type RTRTCache = Record<string, { data?: unknown, expiry?: number } | undefined>
 
-const RTRTCacheContext = createContext<{ cache: RTRTCache, setCache: React.Dispatch<React.SetStateAction<RTRTCache>> }>({ cache: {}, setCache: () => { } });
+const RTRTCacheContext = createContext<{ updated?: number, cache: RTRTCache, setCache: (update: ((prev: RTRTCache) => RTRTCache) | RTRTCache) => void }>({ cache: {}, setCache: () => { } });
 
 export const RTRTCacheContextProvider: FC<PropsWithChildren<{}>> = ({ children }) =>
 {
-	const [cache, setCache] = useState<RTRTCache>({});
-	return <RTRTCacheContext.Provider children={children} value={{ cache, setCache }} />
+	const [updated, setUpdated] = useState<number>();
+	const [cache, setCacheRaw] = useState<RTRTCache>({});
+	const setCache = useCallback(
+		(update: ((prev: RTRTCache) => RTRTCache) | RTRTCache) => {
+			setCacheRaw(update);
+			setUpdated(Date.now());
+		},
+		[setCacheRaw]);
+	return <RTRTCacheContext.Provider children={children} value={{ updated, cache, setCache }} />
 }
+
+let loading = false;
 
 export function useApi<T>(path: string, maxAgeMs=300000, extras: string = ""): T | undefined
 {
@@ -22,25 +32,52 @@ export function useApi<T>(path: string, maxAgeMs=300000, extras: string = ""): T
 	const cacheKey		= path + "/" + extras;
 	const cacheEntry	= cache[cacheKey];
 
+	const [tick, setTick] = useState(0);
+	useEffect(() =>
+		{
+			const id = setInterval(() => setTick(tick => tick + 1), 5000);
+			return () => clearInterval(id);
+		},
+		[setTick])
+
 	useEffect(() =>
 		{
 			if (cacheEntry)
 			{
-				if (cacheEntry.loading)
+				if (loading)
 					return;
 
 				if (cacheEntry.expiry && Date.now() < cacheEntry.expiry)
 					return;
 			}
 			
-			setCache(cache => ({ ...cache, [cacheKey]: { ...cache[cacheKey], loading: true } }));
-			
+			loading = true;
+
 			fetch(`${EventsURL}${path}?appid=${appid}&token=${token}${extras}`)
 				.then(res => res.json())
-				.then(data => setCache(cache => ({ ...cache, [cacheKey]: { data, expiry: Date.now() + maxAgeMs, loading: false } })))
-				.catch(() => setCache(cache => ({ ...cache, [cacheKey]: { loading: false } })))
+				.then(data => setCache(cache => ({ ...cache, [cacheKey]: { data, expiry: Date.now() + maxAgeMs } })))
+				.finally(() => loading = false);
 		},
-		[cacheEntry, setCache, cacheKey, path, extras, maxAgeMs]);
+		[cacheEntry, setCache, cacheKey, path, extras, maxAgeMs, tick]);
 
 	return cacheEntry?.data as T | undefined;
 }
+
+export const LastUpdated = () =>
+{
+	const { updated } = useContext(RTRTCacheContext);
+	if (!updated)
+		return null;
+
+	return <StyledLastUpdated>Last updated:{" "}{new Date(updated).toLocaleString()}</StyledLastUpdated>
+}
+
+const StyledLastUpdated = styled.div`
+	position: absolute;
+	left: 0;
+	bottom: 0;
+	padding: 2px;
+	font-size: 11px;
+	z-index: 1000;
+	background: #f0f0f0;
+`;
