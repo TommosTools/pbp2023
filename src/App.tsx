@@ -153,6 +153,7 @@ console.log("re-rendering markers");
 				icon={bikeIcon}
 				position={[+geo.ecoords!.lat, +geo.ecoords!.lng]}
 				key={profile.pid}
+				zIndexOffset={1}
 			>
 				<Popup ref={ popup => popups.current[profile.pid] = popup }>
 					<b>{profile.name}</b>
