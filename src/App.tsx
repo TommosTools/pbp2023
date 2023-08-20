@@ -1,14 +1,15 @@
-import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap, ScaleControl } from "react-leaflet";
 import { Icon, type Popup as TPopup, type LatLngExpression } from "leaflet";
 import route from "./route.json";
 import participants from "./participants.json";
-import { GeoJsonObject } from "geojson";
+import { GeoJsonObject, LineString } from "geojson";
 import { LastUpdated, RTRTCacheContextProvider, useApi, useLastUpdated } from "./RTRT";
 import checkpointImage from "./icons/checkpoint.svg";
 import bikeImage from "./icons/bike.svg";
 import { createGlobalStyle, css, styled } from "styled-components";
-import { FC, PropsWithChildren, createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { FC, MutableRefObject, PropsWithChildren, createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import MarkerClusterGroup from 'react-leaflet-cluster'
+import along from "@turf/along";
 
 const checkpointIcon = new Icon({
 	iconUrl: checkpointImage,
@@ -33,8 +34,9 @@ const OpeningContextProvider: FC<PropsWithChildren<{}>> = ({ children }) =>
 	return <OpeningContext.Provider	children={children} value={{ id, setId }} />
 }
 
-function App() {
-	const position: LatLngExpression = [48.505, -1]
+function App()
+{
+	const position: LatLngExpression = [48.505, -1];
 	const zoom = 8;
 
 	return (<>
@@ -46,6 +48,7 @@ function App() {
 						attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
 						url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
 					/>
+					<ScaleControl position="bottomright" />
 					<GeoJSON
 						data={route as GeoJsonObject}
 					/>
@@ -90,7 +93,7 @@ const Checkpoints = () =>
 					<Popup>
 						<b>{checkpoint.name}</b>
 						<br />
-						{checkpoint.km} km
+						{checkpoint.km} km / {checkpoint.miles} mi
 					</Popup>
 				</Marker>
 			)
@@ -119,6 +122,8 @@ type Geo = {
 		lng: string;
 	};
 	epc: string;
+	emiles: string;
+	mph: string;
 }
 
 const codes = participants.map(p => p.pid).join(",");
@@ -130,8 +135,6 @@ const ParticipantMarkers = () => {
 		() => profiles?.list.filter(p => profiles.info.loc[p.pid].ecoords).map(p => ({ profile: p, geo: profiles.info.loc[p.pid] })),
 		[profiles]
 	);
-
-	const updated = useLastUpdated();
 
 	const popups = useRef<Record<string, TPopup | null>>({});
 
@@ -148,24 +151,49 @@ const ParticipantMarkers = () => {
 		[openId, map, setId]
 	);
 
-	return (<MarkerClusterGroup>
+	return (<MarkerClusterGroup maxClusterRadius={10}>
 		{ geos?.map(({ profile, geo }) =>
-			<Marker
-				icon={bikeIcon}
-				position={[+geo.ecoords!.lat, +geo.ecoords!.lng]}
-				key={profile.pid}
-				zIndexOffset={1}
-			>
-				<Popup ref={ popup => popups.current[profile.pid] = popup }>
-					<b>{profile.name}</b>
-					<br/>
-					Last seen: { formatTime(updated! - 1000 * +geo.sslp) }
-					<br/>
-					at { geo.lpn}
-				</Popup>
-			</Marker>
-		) }
+			<ParticipantMarker profile={profile} geo={geo} key={profile.pid} popups={popups} />) }
 	</MarkerClusterGroup>);
+}
+
+const EventLength = 757.45;
+
+function useEstimatedPosition(geo: Geo)
+{
+	return useMemo(() =>
+		{
+			const distance = +geo.emiles + (Math.min(+geo.mph, 30) * (+geo.sslp / 3600));
+			const pos = along(route.features[0].geometry as LineString, distance, { units: "miles" }).geometry.coordinates;
+
+			return { distance, pos };
+		},
+		[geo]);
+}
+
+const ParticipantMarker: FC<{ profile: Profile, geo: Geo, popups: MutableRefObject<Record<string, TPopup | null>> }> = ({ profile, geo, popups }) =>
+{
+	const updated = useLastUpdated();
+	const { distance, pos } = useEstimatedPosition(geo);
+
+	return (
+		<Marker
+			icon={bikeIcon}
+			// position={[+geo.ecoords!.lat, +geo.ecoords!.lng]}
+			position={[pos[1], pos[0]]}
+			zIndexOffset={1}
+		>
+			<Popup ref={ popup => popups.current[profile.pid] = popup }>
+				<b>{profile.name}</b>
+				<br/>
+				Last seen: { formatTime(updated! - 1000 * +geo.sslp) }
+				<br/>
+				at {geo.lpn}
+				<br/>
+				Estimated distance from start: { (distance * 1.61).toFixed(1) } km / {distance.toFixed(1)} mi
+			</Popup>
+		</Marker>
+	);
 }
 
 function formatTime(timestamp: number)
