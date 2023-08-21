@@ -9,7 +9,6 @@ import bikeImage from "./icons/bike.svg";
 import bikeBackImage from "./icons/bike-back.svg";
 import { createGlobalStyle, css, styled } from "styled-components";
 import { FC, MutableRefObject, PropsWithChildren, createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
-import MarkerClusterGroup from 'react-leaflet-cluster'
 import along from "@turf/along";
 
 const checkpointIcon = new Icon({
@@ -24,14 +23,21 @@ const bikeIcon = new Icon({
 	iconSize: [30, 24],
 	iconAnchor: [15, 12],
 	popupAnchor: [1, -12],
+
 })
 
-const bikeBackIcon = new Icon({
-	iconUrl: bikeBackImage,
-	iconSize: [30, 24],
-	iconAnchor: [15, 12],
-	popupAnchor: [1, -12],
-})
+function makeBikeBackIcon(pc: number)
+{
+	const roundPc = Math.max(50, Math.min(Math.round((pc / 10)) * 10, 100));
+
+	return new Icon({
+		iconUrl: bikeBackImage,
+		iconSize: [30, 24],
+		iconAnchor: [15, 12],
+		popupAnchor: [1, -12],
+		...{ className: `pc${roundPc}` },
+	})	
+}
 
 const OpeningContext = createContext<{ id?: string, setId: (id: string | undefined) => void }>({ setId: () => {} });
 
@@ -171,7 +177,7 @@ const ParticipantMarkers = () => {
 	</>);
 }
 
-const EventLength = 757.45;
+const EventLength = 757.45;	// miles
 const MaxAverageSpeed = 20;	// mph
 
 function useEstimatedPosition(geo: Geo)
@@ -196,9 +202,13 @@ const ParticipantMarker: FC<{ profile: Profile, geo: Geo, popups: MutableRefObje
 {
 	const updated = useLastUpdated();
 	const { distance, pos } = useEstimatedPosition(geo);
+	const icon = useMemo(() =>
+		+geo.epc < 50 ? bikeIcon : makeBikeBackIcon(+geo.epc),
+		[geo]
+	);
 	return (
 		<Marker
-			icon={+geo.epc < 50 ? bikeIcon : bikeBackIcon}
+			icon={icon}
 			// position={[+geo.ecoords!.lat, +geo.ecoords!.lng]}
 			position={[pos[1], pos[0]]}
 			zIndexOffset={1}
@@ -337,4 +347,11 @@ const GlobalStyle = createGlobalStyle`
 		font-family: sans-serif;
 		font-size: 12px;
 	}
+
+	.pc50 {   filter: invert(0.05) sepia(1) saturate(50) hue-rotate(10deg); }
+	.pc60 {   filter: invert(0.06) sepia(1) saturate(50) hue-rotate(10deg); }
+	.pc70 {   filter: invert(0.07) sepia(1) saturate(50) hue-rotate(10deg); }
+	.pc80 {   filter: invert(0.08) sepia(1) saturate(50) hue-rotate(10deg); }
+	.pc90 {   filter: invert(0.09) sepia(1) saturate(50) hue-rotate(10deg); }
+	.pc100 {  filter: invert(0.11) sepia(1) saturate(50) hue-rotate(10deg); }
 `
