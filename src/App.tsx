@@ -6,6 +6,7 @@ import { GeoJsonObject, LineString } from "geojson";
 import { LastUpdated, RTRTCacheContextProvider, useApi, useLastUpdated } from "./RTRT";
 import checkpointImage from "./icons/checkpoint.svg";
 import bikeImage from "./icons/bike.svg";
+import bikeBackImage from "./icons/bike-back.svg";
 import { createGlobalStyle, css, styled } from "styled-components";
 import { FC, MutableRefObject, PropsWithChildren, createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import MarkerClusterGroup from 'react-leaflet-cluster'
@@ -20,6 +21,13 @@ const checkpointIcon = new Icon({
 
 const bikeIcon = new Icon({
 	iconUrl: bikeImage,
+	iconSize: [30, 24],
+	iconAnchor: [15, 12],
+	popupAnchor: [1, -12],
+})
+
+const bikeBackIcon = new Icon({
+	iconUrl: bikeBackImage,
 	iconSize: [30, 24],
 	iconAnchor: [15, 12],
 	popupAnchor: [1, -12],
@@ -124,6 +132,7 @@ type Geo = {
 	epc: string;
 	emiles: string;
 	mph: string;
+	sss: string;
 	last?: {
 		npm: string;
 		lpm: string;
@@ -149,6 +158,7 @@ const ParticipantMarkers = () => {
 		{
 			if (openId)
 			{
+				console.log("want to open", openId, popups.current[openId]);
 				popups.current[openId]?.openOn(map);
 				setId(undefined);
 			}
@@ -169,8 +179,13 @@ function useEstimatedPosition(geo: Geo)
 {
 	return useMemo(() =>
 		{
+			const estimatedSpeed = Math.min(
+				+geo.mph,
+				geo.last?.lpm ? (+geo.last.lpm / (+geo.sss / 3600)) : Infinity,
+				MaxAverageSpeed
+			);
 			const nextDistance = geo.last?.npm ? +geo.last.npm : Infinity;
-			const distance = Math.min(nextDistance, +geo.emiles + (Math.min(+geo.mph, MaxAverageSpeed) * (+geo.sslp / 3600)));
+			const distance = Math.min(nextDistance, +geo.emiles + (estimatedSpeed * (+geo.sslp / 3600)));
 			const pos = along(route.features[0].geometry as LineString, distance, { units: "miles" }).geometry.coordinates;
 
 			return { distance, pos };
@@ -182,10 +197,10 @@ const ParticipantMarker: FC<{ profile: Profile, geo: Geo, popups: MutableRefObje
 {
 	const updated = useLastUpdated();
 	const { distance, pos } = useEstimatedPosition(geo);
-
+console.log(Object.keys(popups.current));
 	return (
 		<Marker
-			icon={bikeIcon}
+			icon={+geo.epc < 50 ? bikeIcon : bikeBackIcon}
 			// position={[+geo.ecoords!.lat, +geo.ecoords!.lng]}
 			position={[pos[1], pos[0]]}
 			zIndexOffset={1}
@@ -213,7 +228,7 @@ function formatTime(timestamp: number)
 	else if (seconds < 20 * 60)
 		return `${ Math.round(seconds / 60) } minutes ago`;
 	else if (seconds < 24 * 60 * 60)
-		return (new Date(timestamp)).toTimeString().replace(/.*?(\d{2}:\d{2}).*(\(.*\))/, '$1 $2');
+		return (new Date(timestamp)).toTimeString().replace(/.*?(\d{2}:\d{2}).*(\(.*\))/, '$1 $2').replace(/British Summer Time/, "BST");
 	else
 		return (new Date(timestamp)).toString();
 }
