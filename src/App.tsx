@@ -124,6 +124,11 @@ type Geo = {
 	epc: string;
 	emiles: string;
 	mph: string;
+	last?: {
+		npm: string;
+		lpm: string;
+	}
+	multiplier?: string;
 }
 
 const codes = participants.map(p => p.pid).join(",");
@@ -132,7 +137,7 @@ const ParticipantMarkers = () => {
 	const profiles = useApi<{ list: Profile[], info: { loc: Record<string, Geo> } }>(`profiles/${codes}`, 60000, "&max=30&loc=1&ecoords=1");
 
 	const geos = useMemo(
-		() => profiles?.list.filter(p => profiles.info.loc[p.pid].ecoords).map(p => ({ profile: p, geo: profiles.info.loc[p.pid] })),
+		() => profiles?.list.filter(p => profiles.info.loc[p.pid].multiplier).map(p => ({ profile: p, geo: profiles.info.loc[p.pid] })),
 		[profiles]
 	);
 
@@ -158,12 +163,14 @@ const ParticipantMarkers = () => {
 }
 
 const EventLength = 757.45;
+const MaxAverageSpeed = 20;	// mph
 
 function useEstimatedPosition(geo: Geo)
 {
 	return useMemo(() =>
 		{
-			const distance = +geo.emiles + (Math.min(+geo.mph, 30) * (+geo.sslp / 3600));
+			const nextDistance = geo.last?.npm ? +geo.last.npm : Infinity;
+			const distance = Math.min(nextDistance, +geo.emiles + (Math.min(+geo.mph, MaxAverageSpeed) * (+geo.sslp / 3600)));
 			const pos = along(route.features[0].geometry as LineString, distance, { units: "miles" }).geometry.coordinates;
 
 			return { distance, pos };
@@ -189,6 +196,7 @@ const ParticipantMarker: FC<{ profile: Profile, geo: Geo, popups: MutableRefObje
 				Last seen: { formatTime(updated! - 1000 * +geo.sslp) }
 				<br/>
 				at {geo.lpn}
+				{ geo.last?.lpm && ` (${(+geo.last.lpm * 1.61).toFixed(1)} km / ${(+geo.last.lpm).toFixed(1)} mi)` }
 				<br/>
 				Estimated distance from start: { (distance * 1.61).toFixed(1) } km / {distance.toFixed(1)} mi
 			</Popup>
