@@ -236,7 +236,7 @@ const Participants = () =>
 	const [tick, setTick] = useState(0);
 	useEffect(() =>
 		{
-			const id = setInterval(() => setTick(tick => tick + 1), 5000);
+			const id = setInterval(() => setTick(tick => tick + 1), 15000);
 			return () => clearInterval(id);
 		},
 		[setTick])
@@ -247,6 +247,7 @@ const Participants = () =>
 
 	const sortedProfiles = useMemo(
 		() => profiles?.list.sort((a, b) => {
+			/*
 			const epcA = +profiles.info.loc[a.pid]?.epc;
 			const epcB = +profiles.info.loc[b.pid]?.epc;
 
@@ -264,6 +265,7 @@ const Participants = () =>
 			{
 				return 1;
 			}
+			*/
 
 			if (a.name < b.name) return -1;
 			if (a.name > b.name) return 1;
