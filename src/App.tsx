@@ -158,7 +158,6 @@ const ParticipantMarkers = () => {
 		{
 			if (openId)
 			{
-				console.log("want to open", openId, popups.current[openId]);
 				popups.current[openId]?.openOn(map);
 				setId(undefined);
 			}
@@ -166,7 +165,7 @@ const ParticipantMarkers = () => {
 		[openId, map, setId]
 	);
 
-	return (<MarkerClusterGroup maxClusterRadius={10}>
+	return (<MarkerClusterGroup maxClusterRadius={3}>
 		{ geos?.map(({ profile, geo }) =>
 			<ParticipantMarker profile={profile} geo={geo} key={profile.pid} popups={popups} />) }
 	</MarkerClusterGroup>);
@@ -197,7 +196,6 @@ const ParticipantMarker: FC<{ profile: Profile, geo: Geo, popups: MutableRefObje
 {
 	const updated = useLastUpdated();
 	const { distance, pos } = useEstimatedPosition(geo);
-console.log(Object.keys(popups.current));
 	return (
 		<Marker
 			icon={+geo.epc < 50 ? bikeIcon : bikeBackIcon}
@@ -224,7 +222,7 @@ function formatTime(timestamp: number)
 	const seconds = (Date.now() - timestamp) / 1000;
 
 	if (seconds < 100)
-		return `${ seconds }s ago`;
+		return `${ seconds.toFixed(0) }s ago`;
 	else if (seconds < 20 * 60)
 		return `${ Math.round(seconds / 60) } minutes ago`;
 	else if (seconds < 24 * 60 * 60)
