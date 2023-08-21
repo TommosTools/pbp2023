@@ -165,10 +165,10 @@ const ParticipantMarkers = () => {
 		[openId, map, setId]
 	);
 
-	return (<MarkerClusterGroup maxClusterRadius={3}>
+	return (<>
 		{ geos?.map(({ profile, geo }) =>
 			<ParticipantMarker profile={profile} geo={geo} key={profile.pid} popups={popups} />) }
-	</MarkerClusterGroup>);
+	</>);
 }
 
 const EventLength = 757.45;
