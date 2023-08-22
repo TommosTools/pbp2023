@@ -10,6 +10,7 @@ import bikeBackImage from "./icons/bike-back.svg";
 import { createGlobalStyle, css, styled } from "styled-components";
 import { FC, MutableRefObject, PropsWithChildren, createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import along from "@turf/along";
+import pointLookup from "./pointLookup.json";
 
 const checkpointIcon = new Icon({
 	iconUrl: checkpointImage,
@@ -142,6 +143,7 @@ type Geo = {
 	last?: {
 		npm: string;
 		lpm: string;
+		npn: string;
 	}
 	multiplier?: string;
 }
@@ -191,7 +193,13 @@ function useEstimatedPosition(geo: Geo)
 			);
 			const nextDistance = geo.last?.npm ? +geo.last.npm : Infinity;
 			const distance = Math.min(nextDistance, +geo.emiles + (estimatedSpeed * (+geo.sslp / 3600)));
-			const pos = along(route.features[0].geometry as LineString, distance, { units: "miles" }).geometry.coordinates;
+
+			const nextPoint = geo.last && (pointLookup as any)[geo.last.npn];
+			const estPos = along(route.features[0].geometry as LineString, distance, { units: "miles" }).geometry.coordinates;
+			const pos =
+				distance === nextDistance && nextPoint
+					?	[+nextPoint.lng, +nextPoint.lat]
+					:	estPos;
 
 			return { distance, pos };
 		},
@@ -203,7 +211,7 @@ const ParticipantMarker: FC<{ profile: Profile, geo: Geo, popups: MutableRefObje
 	const updated = useLastUpdated();
 	const { distance, pos } = useEstimatedPosition(geo);
 	const icon = useMemo(() =>
-		+geo.epc < 50 ? bikeIcon : makeBikeBackIcon(+geo.epc),
+		+geo.emiles < 375 ? bikeIcon : makeBikeBackIcon(+geo.epc),
 		[geo]
 	);
 	return (
