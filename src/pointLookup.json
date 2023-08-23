@@ -1,0 +1,74 @@
+{
+    "START": {
+      "lat": "48.65083",
+      "lng": "1.8169"
+    },
+    "MORTAGNE-AU-PERCHE": {
+      "lat": "48.523253",
+      "lng": "0.539877"
+    },
+    "VILLAINES-LA-JUHEL": {
+      "lat": "48.341943",
+      "lng": "-0.297016"
+    },
+    "FOUGERES": {
+      "lat": "48.35663",
+      "lng": "-1.204196"
+    },
+    "TINTENIAC": {
+      "lat": "48.319747",
+      "lng": "-1.868114"
+    },
+    "LOUDEAC": {
+      "lat": "48.175971",
+      "lng": "-2.7571"
+    },
+    "CANIHUEL": {
+      "lat": "48.331056",
+      "lng": "-3.107809"
+    },
+    "CARHAIX-PLOUGUER": {
+      "lat": "48.283524",
+      "lng": "-3.555862"
+    },
+    "BREST": {
+      "lat": "48.405879",
+      "lng": "-4.479814"
+    },
+    "PLEYBEN": {
+      "lat": "48.227863",
+      "lng": "-3.959328"
+    },
+    "CARHAIX-PLOUGUER-RETOUR": {
+      "lat": "48.278912",
+      "lng": "-3.538437"
+    },
+    "LOUDEAC-RETOUR": {
+      "lat": "48.170727",
+      "lng": "-2.743054"
+    },
+    "TINTENIAC-RETOUR": {
+      "lat": "48.327793",
+      "lng": "-1.832734"
+    },
+    "FOUGERES-RETOUR": {
+      "lat": "48.346824",
+      "lng": "-1.18581"
+    },
+    "VILLAINES-LA-JUHEL-RETOUR": {
+      "lat": "48.341789",
+      "lng": "-0.260747"
+    },
+    "MORTAGNE-AU-PERCHE-RETOUR": {
+      "lat": "48.519876",
+      "lng": "0.564291"
+    },
+    "DREUX-RETOUR": {
+      "lat": "48.726682",
+      "lng": "1.399012"
+    },
+    "FINISH": {
+      "lat": "48.65083",
+      "lng": "1.8169"
+    }
+  }  
