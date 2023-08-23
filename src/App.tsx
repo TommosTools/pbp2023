@@ -198,7 +198,7 @@ function useEstimatedPosition(geo: Geo)
 				MaxAverageSpeed
 			);
 			const nextDistance = geo.last?.npm ? +geo.last.npm : Infinity;
-			const distance = Math.min(nextDistance, +geo.emiles + (estimatedSpeed * (+geo.sslp / 3600)));
+			const distance = Math.min(nextDistance, +geo.emiles + (estimatedSpeed * (+geo.sslp / 3600)), EventLength);
 
 			const nextPoint = geo.last && (pointLookup as any)[geo.last.npn];
 			const estPos = along(route.features[0].geometry as LineString, distance, { units: "miles" }).geometry.coordinates;
@@ -236,6 +236,8 @@ const ParticipantMarker: FC<{ profile: Profile, geo: Geo, popups: MutableRefObje
 				{ geo.last?.lpm && ` (${(+geo.last.lpm * 1.61).toFixed(1)} km / ${(+geo.last.lpm).toFixed(1)} mi)` }
 				<br/>
 				Estimated distance from start: { (distance * 1.61).toFixed(1) } km / {distance.toFixed(1)} mi
+				<br/>
+				Estimated distance to end: { ((EventLength - distance) * 1.61).toFixed(1) } km / {(EventLength - distance).toFixed(1)} mi
 			</Popup>
 		</Marker>
 	);
