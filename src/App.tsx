@@ -71,7 +71,10 @@ function App()
 					<ParticipantMarkers/>
 				</MapContainer>
 
-				<Participants/>
+				<TopRight>
+					<Participants/>
+					<LatestEvents/>
+				</TopRight>
 
 				<LastUpdated/>
 			</RTRTCacheContextProvider>
@@ -150,8 +153,11 @@ type Geo = {
 
 const codes = participants.map(p => p.pid).join(",");
 
+const useProfilesWithGeo = (tick?: unknown) =>
+	useApi<{ list: Profile[], info: { loc: Record<string, Geo> } }>(`profiles/${codes}`, 60000, "&max=30&loc=1&ecoords=1");
+
 const ParticipantMarkers = () => {
-	const profiles = useApi<{ list: Profile[], info: { loc: Record<string, Geo> } }>(`profiles/${codes}`, 60000, "&max=30&loc=1&ecoords=1");
+	const profiles = useProfilesWithGeo();
 
 	const geos = useMemo(
 		() => profiles?.list.filter(p => profiles.info.loc[p.pid].multiplier).map(p => ({ profile: p, geo: profiles.info.loc[p.pid] })),
@@ -249,6 +255,70 @@ function formatTime(timestamp: number)
 		return (new Date(timestamp)).toString();
 }
 
+const TopRight = styled.div`
+	position: absolute;
+	right: 5px;
+	top: 5px;
+	width: 120px;
+	z-index: 1000;
+	max-height: calc(70vh);
+
+	display: flex;
+	flex-direction: column;
+`;
+
+const LatestEvents = () =>
+{
+	const updated	= useLastUpdated();
+	const profiles	= useProfilesWithGeo();
+	const events	= useMemo(() =>
+		profiles?.info.loc
+			?	Object.entries(profiles.info.loc)
+					.filter(([, geo]) => geo.last)
+					.sort(([,a], [,b]) => +a.sslp - +b.sslp)
+					.slice(0, 3)
+					.map(([id, geo]) => ({ profile: profiles.list.find(p => p.pid === id), geo }))
+			:	[],
+		[profiles]
+	);
+
+	const { setId } = useContext(OpeningContext);
+
+	return (
+		<StyledLatestEvents>
+			<EventsHeader>Latest check-ins</EventsHeader>
+			{ events.map(event =>
+				<StyledEvent key={event.profile?.pid} onClick={ () => setId(event.profile?.pid) }>
+					<div><b>{ event.profile?.name }</b></div>
+					<div>at { event.geo.lpn }</div>
+					<div>({ formatTime(updated! - 1000 * +event.geo.sslp) })</div>
+				</StyledEvent>) }
+		</StyledLatestEvents>
+	);
+}
+
+const EventsHeader = styled.div`
+	padding: 3px;
+	font-weight: bold;
+`;
+
+const StyledLatestEvents = styled.div`
+	margin-top: 5px;
+	border: 1px solid #666;
+	background: white;
+	flex-shrink: 0;
+`;
+
+const StyledEvent = styled.div`
+	cursor: pointer;
+	padding: 3px;
+	& > div {
+		overflow-x: hidden;
+		white-space: nowrap;
+		text-overflow: ellipsis;
+	}
+`;
+
 const Participants = () =>
 {
 	const [tick, setTick] = useState(0);
@@ -259,7 +329,7 @@ const Participants = () =>
 		},
 		[setTick])
 
-	const profiles = useApi<{ list: Profile[], info: { loc: Record<string, Geo> } }>(`profiles/${codes}`, 60000, "&max=30&loc=1&ecoords=1", tick);
+	const profiles = useProfilesWithGeo(tick);
 
 	const [opened, setOpened] = useState(false);
 
@@ -312,13 +382,9 @@ const StyledParticipants = styled.div`
 		background: white;
 		border: 1px solid #666;
 		padding: 3px;
-		position: absolute;
-		right: 5px;
-		top: 5px;
-		width: 120px;
-		z-index: 1000;
 
-		max-height: calc(50vh);
+		flex-basis: 100%;
+		flex-shrink: 1;
 		overflow-y: auto;
 	}
 `;
